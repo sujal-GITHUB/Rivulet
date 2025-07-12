@@ -19,7 +19,7 @@ async function main() {
     JSON.stringify(contractData, null, 2)
   );
 
-  console.log(`✅ contract-data.json written to /backend`);
+  console.log(`✅ Contract data written to backend/contract-data.json`);
 }
 
 main().catch((error) => {
