@@ -4,5 +4,9 @@
     "dotenv": "^17.2.0",
     "ethers": "^6.15.0",
     "express": "^5.1.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "npx nodemon server.js"
   }
 }

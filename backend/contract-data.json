@@ -1,0 +1,280 @@
+{
+  "address": "0xfB8BDf6be445B3ED6BD66fe29b4Fa73A2e3A3159",
+  "abi": [
+    {
+      "type": "constructor",
+      "stateMutability": "undefined",
+      "payable": false,
+      "inputs": []
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "CheckpointAdded",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "productId",
+          "indexed": true
+        },
+        {
+          "type": "string",
+          "name": "step",
+          "indexed": false
+        },
+        {
+          "type": "string",
+          "name": "location",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "ProductRegistered",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "productId",
+          "indexed": true
+        },
+        {
+          "type": "string",
+          "name": "name",
+          "indexed": false
+        },
+        {
+          "type": "string",
+          "name": "brand",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "addCheckpoint",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "_productId"
+        },
+        {
+          "type": "string",
+          "name": "_step"
+        },
+        {
+          "type": "string",
+          "name": "_location"
+        },
+        {
+          "type": "string",
+          "name": "_status"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "getProductDetails",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "_productId"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        },
+        {
+          "type": "string",
+          "name": ""
+        },
+        {
+          "type": "string",
+          "name": ""
+        },
+        {
+          "type": "string",
+          "name": ""
+        },
+        {
+          "type": "string",
+          "name": ""
+        },
+        {
+          "type": "string",
+          "name": ""
+        },
+        {
+          "type": "string",
+          "name": ""
+        },
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getProductJourney",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "_productId"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "tuple[]",
+          "name": "",
+          "components": [
+            {
+              "type": "string",
+              "name": "step"
+            },
+            {
+              "type": "string",
+              "name": "location"
+            },
+            {
+              "type": "uint256",
+              "name": "timestamp"
+            },
+            {
+              "type": "string",
+              "name": "status"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "owner",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "productCount",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "products",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": "id"
+        },
+        {
+          "type": "string",
+          "name": "name"
+        },
+        {
+          "type": "string",
+          "name": "brand"
+        },
+        {
+          "type": "string",
+          "name": "sku"
+        },
+        {
+          "type": "string",
+          "name": "batch"
+        },
+        {
+          "type": "string",
+          "name": "originFarm"
+        },
+        {
+          "type": "string",
+          "name": "originCountry"
+        },
+        {
+          "type": "uint256",
+          "name": "manufacturingDate"
+        },
+        {
+          "type": "bool",
+          "name": "isInitialized"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "registerProduct",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "string",
+          "name": "_name"
+        },
+        {
+          "type": "string",
+          "name": "_brand"
+        },
+        {
+          "type": "string",
+          "name": "_sku"
+        },
+        {
+          "type": "string",
+          "name": "_batch"
+        },
+        {
+          "type": "string",
+          "name": "_originFarm"
+        },
+        {
+          "type": "string",
+          "name": "_originCountry"
+        },
+        {
+          "type": "uint256",
+          "name": "_manufacturingDate"
+        }
+      ],
+      "outputs": []
+    }
+  ]
+}

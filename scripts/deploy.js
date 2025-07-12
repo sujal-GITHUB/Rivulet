@@ -4,14 +4,16 @@ const fs = require("fs");
 
 async function main() {
   const ProductTracker = await hre.ethers.getContractFactory("ProductTracker");
-  const tracker = await ProductTracker.deploy();
-  await tracker.deployed();
 
-  console.log(`✅ Contract deployed to: ${tracker.address}`);
+  console.log("🚀 Deploying ProductTracker...");
+  const tracker = await ProductTracker.deploy();
+  await tracker.waitForDeployment(); // ✅ Ethers v6 way
+
+  console.log(`✅ Contract deployed to: ${tracker.target}`);
 
   const contractData = {
-    address: tracker.address,
-    abi: JSON.parse(tracker.interface.formatJson()),
+    address: tracker.target, // ✅ Ethers v6 uses .target instead of .address
+    abi: JSON.parse(ProductTracker.interface.formatJson()), // use the factory's ABI
   };
 
   fs.writeFileSync(
