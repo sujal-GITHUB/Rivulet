@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import LandingPage from './components/LandingPage';
 import ScanView from './components/ScanView';
 import ScanningView from './components/ScanningView';
@@ -10,9 +10,27 @@ import QRCodeScanner from './components/QRCodeScanner';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
 import Register from './components/Register';
+import RoleSelection from './components/RoleSelection';
 
-const API_URL = "http://localhost:3001";
+import { API_URL } from './config/api';
 const MOCK_PRODUCT_ID = 1;
+
+// Wrapper components to handle URL parameters
+const LoginWrapper = ({ onLogin, onNavigate }) => {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const role = searchParams.get('role');
+  
+  return <Login onLogin={onLogin} onNavigate={onNavigate} defaultRole={role} />;
+};
+
+const RegisterWrapper = ({ onRegister, onNavigate }) => {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const role = searchParams.get('role');
+  
+  return <Register onRegister={onRegister} onNavigate={onNavigate} defaultRole={role} />;
+};
 
 const App = () => {
   const [scanProgress, setScanProgress] = useState(0);
@@ -58,6 +76,9 @@ const App = () => {
     }
   };
 
+  // Helper: is the current user a customer?
+  const isCustomer = userData && (userData.role === 2 || userData.role === 'CUSTOMER');
+
   const handleLogin = async (credentials) => {
     try {
       const response = await fetch(`${API_URL}/api/auth/login`, {
@@ -73,7 +94,12 @@ const App = () => {
         localStorage.setItem('token', data.token);
         setIsAuthenticated(true);
         setUserData(data.user);
-        navigate('/dashboard');
+        // Redirect customers to /scan, partners to /dashboard
+        if (data.user.role === 2 || data.user.role === 'CUSTOMER') {
+          navigate('/scan');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Login failed');
@@ -99,7 +125,12 @@ const App = () => {
         localStorage.setItem('token', data.token);
         setIsAuthenticated(true);
         setUserData(data.user);
-        navigate('/dashboard');
+        // Redirect customers to /scan, partners to /dashboard
+        if (data.user.role === 2 || data.user.role === 'CUSTOMER') {
+          navigate('/scan');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Registration failed');
@@ -128,10 +159,20 @@ const App = () => {
     }, 300);
 
     try {
-      const response = await fetch(`${API_URL}/api/product/${productId}`);
-      if (!response.ok) throw new Error(response.statusText);
-      const data = await response.json();
-      setProductData(data);
+      // Use the QR scan endpoint instead of product endpoint
+      const response = await fetch(`${API_URL}/api/qr/scan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qrData: JSON.stringify({ productId }) })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Product not found or invalid QR code');
+      }
+      
+      const result = await response.json();
+      setProductData(result.product);
 
       setTimeout(() => {
         clearInterval(interval);
@@ -157,10 +198,8 @@ const App = () => {
 
   const getRoleName = (roleNumber) => {
     const roles = {
-      1: 'MANUFACTURER',
-      2: 'LOGISTICS_PARTNER', 
-      3: 'CERTIFIER',
-      4: 'ADMIN'
+      1: 'PARTNER',
+      2: 'CUSTOMER'
     };
     return roles[roleNumber] || 'USER';
   };
@@ -170,41 +209,45 @@ const App = () => {
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<Navigate to="/home" replace />} />
-        <Route path="/home" element={<LandingPage setCurrentView={path => navigate(path)} />} />
+        <Route path="/home" element={
+          <LandingPage 
+            setCurrentView={path => navigate(path)} 
+            isAuthenticated={isAuthenticated}
+            userData={userData}
+            onLogout={handleLogout}
+          />
+        } />
+        <Route path="/role-selection" element={
+          <RoleSelection onNavigate={path => navigate(path)} />
+        } />
         <Route path="/login" element={
-          <Login onLogin={handleLogin} onNavigate={path => navigate(path)} />
+          <LoginWrapper onLogin={handleLogin} onNavigate={path => navigate(path)} />
         } />
         <Route path="/register" element={
-          <Register onRegister={handleRegister} onNavigate={path => navigate(path)} />
+          <RegisterWrapper onRegister={handleRegister} onNavigate={path => navigate(path)} />
         } />
 
         {/* Protected routes */}
         <Route path="/dashboard" element={
           isAuthenticated ? (
-            <Dashboard 
-              userRole={getRoleName(userData?.role)} 
-              userData={userData}
-              onLogout={handleLogout}
-            />
+            isCustomer ? (
+              <Navigate to="/scan" replace />
+            ) : (
+              <Dashboard 
+                userRole={getRoleName(userData?.role)} 
+                userData={userData}
+                onLogout={handleLogout}
+              />
+            )
           ) : (
             <Navigate to="/login" replace />
           )
         } />
 
-        {/* QR Scanner */}
-        {showQRScanner && (
-          <QRCodeScanner
-            onScanSuccess={handleQRScanSuccess}
-            onClose={() => setShowQRScanner(false)}
-            isMobile={window.innerWidth <= 768}
-          />
-        )}
-
         {/* Product scanning routes */}
         <Route path="/scan" element={
           <ScanView
             handleScan={handleScan}
-            onQRScan={() => setShowQRScanner(true)}
             isLoading={isLoading}
             error={error}
             MOCK_PRODUCT_ID={MOCK_PRODUCT_ID}
@@ -234,6 +277,15 @@ const App = () => {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
+
+      {/* QR Scanner - rendered outside Routes */}
+      {showQRScanner && (
+        <QRCodeScanner
+          onScanSuccess={handleQRScanSuccess}
+          onClose={() => setShowQRScanner(false)}
+          isMobile={window.innerWidth <= 768}
+        />
+      )}
     </div>
   );
 };

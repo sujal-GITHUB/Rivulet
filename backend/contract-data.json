@@ -1,11 +1,50 @@
 {
-  "address": "0xfB8BDf6be445B3ED6BD66fe29b4Fa73A2e3A3159",
+  "address": "0x44f1AAC587c2D56671169BCc2B24aAaBEb97F264",
   "abi": [
     {
       "type": "constructor",
       "stateMutability": "undefined",
       "payable": false,
       "inputs": []
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "AuthenticityVerified",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "productId",
+          "indexed": true
+        },
+        {
+          "type": "bool",
+          "name": "isAuthentic",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "CertificationAdded",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "productId",
+          "indexed": true
+        },
+        {
+          "type": "string",
+          "name": "certType",
+          "indexed": false
+        },
+        {
+          "type": "string",
+          "name": "certNumber",
+          "indexed": false
+        }
+      ]
     },
     {
       "type": "event",
@@ -25,6 +64,11 @@
         {
           "type": "string",
           "name": "location",
+          "indexed": false
+        },
+        {
+          "type": "address",
+          "name": "recordedBy",
           "indexed": false
         }
       ]
@@ -48,8 +92,67 @@
           "type": "string",
           "name": "brand",
           "indexed": false
+        },
+        {
+          "type": "string",
+          "name": "qrCodeHash",
+          "indexed": false
         }
       ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "UserRoleUpdated",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "user",
+          "indexed": true
+        },
+        {
+          "type": "uint8",
+          "name": "role",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "addCertification",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "_productId"
+        },
+        {
+          "type": "string",
+          "name": "_certType"
+        },
+        {
+          "type": "string",
+          "name": "_certNumber"
+        },
+        {
+          "type": "string",
+          "name": "_issuer"
+        },
+        {
+          "type": "uint256",
+          "name": "_issueDate"
+        },
+        {
+          "type": "uint256",
+          "name": "_expiryDate"
+        },
+        {
+          "type": "string",
+          "name": "_documentHash"
+        }
+      ],
+      "outputs": []
     },
     {
       "type": "function",
@@ -72,9 +175,117 @@
         {
           "type": "string",
           "name": "_status"
+        },
+        {
+          "type": "string",
+          "name": "_metadata"
         }
       ],
       "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "addUser",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "_user"
+        },
+        {
+          "type": "uint8",
+          "name": "_role"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "authorizedUsers",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": ""
+        }
+      ],
+      "outputs": [
+        {
+          "type": "bool",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getProductByQRCode",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "string",
+          "name": "_qrCodeHash"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getProductCertifications",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "_productId"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "tuple[]",
+          "name": "",
+          "components": [
+            {
+              "type": "string",
+              "name": "certType"
+            },
+            {
+              "type": "string",
+              "name": "certNumber"
+            },
+            {
+              "type": "string",
+              "name": "issuer"
+            },
+            {
+              "type": "uint256",
+              "name": "issueDate"
+            },
+            {
+              "type": "uint256",
+              "name": "expiryDate"
+            },
+            {
+              "type": "string",
+              "name": "documentHash"
+            },
+            {
+              "type": "bool",
+              "name": "isValid"
+            }
+          ]
+        }
+      ]
     },
     {
       "type": "function",
@@ -120,6 +331,14 @@
         {
           "type": "uint256",
           "name": ""
+        },
+        {
+          "type": "string",
+          "name": ""
+        },
+        {
+          "type": "bool",
+          "name": ""
         }
       ]
     },
@@ -155,8 +374,54 @@
             {
               "type": "string",
               "name": "status"
+            },
+            {
+              "type": "address",
+              "name": "recordedBy"
+            },
+            {
+              "type": "string",
+              "name": "metadata"
             }
           ]
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getUserRole",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "_user"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint8",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "isAuthorized",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "_user"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "bool",
+          "name": ""
         }
       ]
     },
@@ -234,8 +499,39 @@
           "name": "manufacturingDate"
         },
         {
+          "type": "string",
+          "name": "qrCodeHash"
+        },
+        {
           "type": "bool",
           "name": "isInitialized"
+        },
+        {
+          "type": "bool",
+          "name": "isAuthentic"
+        },
+        {
+          "type": "string",
+          "name": "authenticityHash"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "qrCodeToProduct",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "string",
+          "name": ""
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
         }
       ]
     },
@@ -272,9 +568,85 @@
         {
           "type": "uint256",
           "name": "_manufacturingDate"
+        },
+        {
+          "type": "string",
+          "name": "_qrCodeHash"
         }
       ],
       "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "removeUser",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "_user"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "updateUserRole",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "_user"
+        },
+        {
+          "type": "uint8",
+          "name": "_role"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "userRoles",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": ""
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint8",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "verifyAuthenticity",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "_productId"
+        },
+        {
+          "type": "string",
+          "name": "_qrCodeHash"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "bool",
+          "name": ""
+        }
+      ]
     }
   ]
 }

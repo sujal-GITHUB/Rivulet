@@ -1,93 +1,152 @@
-import React, { useState } from 'react';
-import { QrCode, Users, Star, Sparkles, Camera } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { QrCode, Users, Star, Camera, ArrowLeft, Upload } from 'lucide-react';
 import CameraScanner from './CameraScanner';
+import { BrowserQRCodeReader } from '@zxing/browser';
+import { API_URL } from '../config/api';
 
-const ScanView = ({ handleScan, onQRScan, isLoading, error, MOCK_PRODUCT_ID, userPoints }) => {
+const ScanView = ({ handleScan, isLoading, error, MOCK_PRODUCT_ID, userPoints, setCurrentView }) => {
   const [showCamera, setShowCamera] = useState(false);
 
-  const handleCameraScan = (decodedText) => {
-    // For now, we'll use the scanned text as the product ID
-    // In a real app, you'd parse the QR code content and extract the product ID
-    const productId = decodedText || MOCK_PRODUCT_ID;
+  // Cleanup effect to ensure camera scanner is stopped when not needed
+  useEffect(() => {
+    return () => {
+      // Ensure camera scanner is closed when component unmounts
+      setShowCamera(false);
+    };
+  }, []);
+
+  // Remove local handleScan; use prop instead
+
+  const handleCameraScan = async (decodedText) => {
+    let productId;
+    try {
+      const parsed = JSON.parse(decodedText);
+      productId = parsed.productId;
+    } catch {
+      productId = decodedText || MOCK_PRODUCT_ID;
+    }
     
-    // Close camera and trigger the scan process
+    // Immediately close the camera scanner
     setShowCamera(false);
     
-    // Simulate the scan process with the scanned product ID
-    setTimeout(() => {
-      handleScan(productId);
-    }, 500);
+    // Process the scan without delay
+    handleScan(productId);
   };
 
   const handleCameraClose = () => {
     setShowCamera(false);
   };
 
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (isLoading) return;
+
+    try {
+      // Use zxing-js/browser for robust QR decoding
+      const img = new window.Image();
+      img.src = URL.createObjectURL(file);
+
+      img.onload = async () => {
+        try {
+          const codeReader = new BrowserQRCodeReader();
+          const result = await codeReader.decodeFromImageElement(img);
+          let productId;
+          try {
+            const parsed = JSON.parse(result.getText());
+            productId = parsed.productId;
+          } catch {
+            productId = result.getText() || MOCK_PRODUCT_ID;
+          }
+          handleScan(productId); // Use prop
+        } catch (decodeError) {
+          console.error('QR decode error (zxing):', decodeError);
+          alert('Could not decode QR code from uploaded image. Please try a different image.');
+        }
+      };
+
+      img.onerror = () => {
+        alert('Failed to load uploaded image. Please try again.');
+      };
+    } catch (error) {
+      console.error('File upload error:', error);
+      alert('Failed to process uploaded file. Please try again.');
+    }
+  };
+
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-8 max-w-md w-full text-center relative overflow-hidden">
-          {/* Background decoration */}
-          <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-blue-500/5 rounded-3xl"></div>
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-green-400/20 to-blue-400/20 rounded-full blur-2xl"></div>
-          <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-2xl"></div>
-          
-          <div className="relative z-10">
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-md mx-auto">
+          {/* Back Button */}
+          <button
+            onClick={() => setCurrentView('/home')}
+            className="flex items-center text-gray-600 hover:text-gray-800 mb-6 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Home
+          </button>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
             <div className="mb-8">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-black to-black bg-clip-text text-transparent mb-2">
-                Rivulet
-              </h1>
-              <p className="text-gray-600 text-lg font-medium">Blockchain-powered product transparency</p>
+            
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Scan Product</h1>
+              <p className="text-gray-600">Blockchain-powered product transparency</p>
             </div>
 
             {/* QR Code Scanner Area */}
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-3xl p-8 mb-8 border border-gray-200/50 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-blue-500/5 rounded-3xl"></div>
-              <div className="relative z-10">
-                <div className="w-32 h-32 mx-auto mb-4 relative">
-                  <QrCode className="w-full h-full text-gray-400" />
-                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-blue-500/10 rounded-full animate-pulse"></div>
-                </div>
-                <p className="text-sm text-gray-600 font-medium">Point your camera at the QR code</p>
+            <div className="bg-gray-50 rounded-lg p-8 mb-8 border border-gray-200">
+              <div className="w-32 h-32 mx-auto mb-4 relative">
+                <QrCode className="w-full h-full text-gray-400" />
+                <div className="absolute inset-0 bg-gray-200 rounded-lg animate-pulse"></div>
               </div>
+              <p className="text-sm text-gray-600 font-medium">Point your camera at the QR code</p>
             </div>
 
             {/* Scan Buttons */}
             <div className="space-y-4">
               <button
-                onClick={() => onQRScan()}
+                onClick={() => setShowCamera(true)}
                 disabled={isLoading}
-                className="w-full cursor-pointer bg-gradient-to-r from-blue-400 via-blue-600 to-blue-400 text-white py-4 px-6 rounded-2xl font-semibold text-lg hover:shadow-xl transition-all duration-300 transform hover:scale-102 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+                className="w-full bg-gray-900 text-white py-4 px-6 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-                <span className="relative flex items-center justify-center">
+                <span className="flex items-center justify-center">
                   <Camera className="w-5 h-5 mr-2" />
                   Scan QR Code
                 </span>
               </button>
 
-              <button
-                onClick={() => handleScan(MOCK_PRODUCT_ID)}
-                disabled={isLoading}
-                className="w-full cursor-pointer bg-white/80 backdrop-blur-sm border border-gray-200 text-gray-700 py-4 px-6 rounded-2xl font-semibold text-lg hover:shadow-lg transition-all duration-300 transform hover:scale-102 disabled:opacity-50 disabled:cursor-not-allowed group"
-              >
-                <span className="relative flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  Demo Scan (Product #{MOCK_PRODUCT_ID})
-                </span>
-              </button>
+              <div className="relative">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  disabled={isLoading}
+                />
+                <button
+                  disabled={isLoading}
+                  className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="flex items-center justify-center">
+                    <Upload className="w-5 h-5 mr-2" />
+                    Upload QR Image
+                  </span>
+                </button>
+              </div>
             </div>
 
             {error && (
-              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
-                <p className="text-red-600 text-sm">{error}</p>
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700 text-sm">{error}</p>
               </div>
             )}
 
             {/* Stats */}
             <div className="mt-8 flex items-center justify-center space-x-6 text-sm">
-              <div className="flex items-center bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-200/50">
-                <Star className="w-4 h-4 mr-2 text-yellow-500" />
+              <div className="flex items-center bg-gray-100 px-4 py-2 rounded-full border border-gray-200">
+                <Star className="w-4 h-4 mr-2 text-gray-600" />
                 <span className="text-gray-700 font-medium">{userPoints} points</span>
               </div>
             </div>
@@ -102,6 +161,7 @@ const ScanView = ({ handleScan, onQRScan, isLoading, error, MOCK_PRODUCT_ID, use
           onClose={handleCameraClose}
         />
       )}
+      <div id="qr-upload-reader" style={{ display: 'none' }}></div>
     </>
   );
 };

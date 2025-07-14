@@ -6,7 +6,7 @@ contract ProductTracker {
     uint256 public productCount;
 
     // Role management
-    enum Role { NONE, MANUFACTURER, LOGISTICS_PARTNER, CERTIFIER, ADMIN }
+    enum Role { NONE, MANUFACTURER, LOGISTICS_PARTNER, CERTIFIER, ADMIN, CUSTOMER }
     
     mapping(address => Role) public userRoles;
     mapping(address => bool) public authorizedUsers;

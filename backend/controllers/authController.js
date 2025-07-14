@@ -1,19 +1,15 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const contract = require("../config/blockchain");
-
-// Mock user database (in production, use a real database)
-const users = new Map();
+const User = require("../models/User");
 
 // JWT secret (in production, use environment variable)
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-// Role mapping
+// Only two roles
 const ROLES = {
-  MANUFACTURER: 1,
-  LOGISTICS_PARTNER: 2,
-  CERTIFIER: 3,
-  ADMIN: 4
+  PARTNER: 1,
+  CUSTOMER: 2
 };
 
 // Register a new user
@@ -26,33 +22,44 @@ exports.register = async (req, res) => {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    // Check if user already exists
-    if (users.has(email)) {
-      return res.status(400).json({ error: 'User already exists' });
+    // Check if user already exists by email or wallet address
+    const existingUserByEmail = await User.findOne({ email });
+    if (existingUserByEmail) {
+      return res.status(400).json({ error: 'User with this email already exists' });
+    }
+
+    const existingUserByWallet = await User.findOne({ walletAddress });
+    if (existingUserByWallet) {
+      return res.status(400).json({ error: 'User with this wallet address already exists' });
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Only allow 'partner' or 'customer' as role
+    let userRole = ROLES.CUSTOMER;
+    if (role && String(role).toLowerCase() === 'partner') userRole = ROLES.PARTNER;
+
     // Create user object
-    const user = {
+    const userData = {
       username,
       email,
       password: hashedPassword,
       walletAddress,
-      role: ROLES[role] || ROLES.MANUFACTURER,
+      role: userRole,
       createdAt: new Date()
     };
 
-    // Store user
-    users.set(email, user);
+    // Save user to database
+    const user = new User(userData);
+    await user.save();
 
     // Add user to blockchain with role
     try {
-      await contract.addUser(walletAddress, user.role);
+      await contract.addUser(walletAddress, userData.role);
     } catch (error) {
       console.error('Error adding user to blockchain:', error);
-      return res.status(500).json({ error: 'Failed to register user on blockchain' });
+      // Don't fail registration if blockchain fails, but log it
     }
 
     // Generate JWT token
@@ -60,7 +67,7 @@ exports.register = async (req, res) => {
       { 
         email, 
         walletAddress, 
-        role: user.role 
+        role: userData.role 
       }, 
       JWT_SECRET, 
       { expiresIn: '24h' }
@@ -78,6 +85,16 @@ exports.register = async (req, res) => {
     });
   } catch (error) {
     console.error('Registration error:', error);
+    // Handle MongoDB duplicate key errors
+    if (error.code === 11000) {
+      if (error.keyPattern && error.keyPattern.email) {
+        return res.status(400).json({ error: 'User with this email already exists' });
+      }
+      if (error.keyPattern && error.keyPattern.walletAddress) {
+        return res.status(400).json({ error: 'User with this wallet address already exists' });
+      }
+      return res.status(400).json({ error: 'User already exists' });
+    }
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -92,8 +109,8 @@ exports.login = async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Find user
-    const user = users.get(email);
+    // Find user in database
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -103,6 +120,10 @@ exports.login = async (req, res) => {
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+
+    // Update last login time
+    user.lastLogin = new Date();
+    await user.save();
 
     // Generate JWT token
     const token = jwt.sign(
@@ -141,34 +162,36 @@ exports.verifyToken = async (req, res) => {
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Get fresh user data from database
+    const user = await User.findOne({ email: decoded.email });
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
     res.json({ 
       valid: true, 
-      user: decoded 
+      user: {
+        username: user.username,
+        email: user.email,
+        walletAddress: user.walletAddress,
+        role: user.role
+      }
     });
   } catch (error) {
     res.status(401).json({ error: 'Invalid token' });
   }
 };
 
-// Add user to blockchain (admin only)
+// Add user to blockchain (remove admin check, only allow PARTNER or CUSTOMER)
 exports.addUser = async (req, res) => {
   try {
     const { walletAddress, role } = req.body;
-
-    // Verify admin token
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
+    // Only allow PARTNER or CUSTOMER
+    if (![ROLES.PARTNER, ROLES.CUSTOMER].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
     }
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.role !== ROLES.ADMIN) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
-    // Add user to blockchain
     await contract.addUser(walletAddress, role);
-
     res.json({ message: 'User added successfully' });
   } catch (error) {
     console.error('Add user error:', error);
@@ -176,25 +199,19 @@ exports.addUser = async (req, res) => {
   }
 };
 
-// Update user role (admin only)
+// Update user role (only allow PARTNER or CUSTOMER)
 exports.updateUserRole = async (req, res) => {
   try {
     const { walletAddress, role } = req.body;
-
-    // Verify admin token
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
+    if (![ROLES.PARTNER, ROLES.CUSTOMER].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
     }
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.role !== ROLES.ADMIN) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
-    // Update user role on blockchain
+    await User.findOneAndUpdate(
+      { walletAddress },
+      { role: role },
+      { new: true }
+    );
     await contract.updateUserRole(walletAddress, role);
-
     res.json({ message: 'User role updated successfully' });
   } catch (error) {
     console.error('Update role error:', error);
@@ -202,7 +219,7 @@ exports.updateUserRole = async (req, res) => {
   }
 };
 
-// Remove user (admin only)
+// Remove user (no change needed)
 exports.removeUser = async (req, res) => {
   try {
     const { walletAddress } = req.params;
@@ -218,6 +235,9 @@ exports.removeUser = async (req, res) => {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
+    // Remove user from database
+    await User.findOneAndDelete({ walletAddress });
+
     // Remove user from blockchain
     await contract.removeUser(walletAddress);
 
@@ -228,7 +248,7 @@ exports.removeUser = async (req, res) => {
   }
 };
 
-// Get user role
+// Get user role (no change needed)
 exports.getUserRole = async (req, res) => {
   try {
     const { address } = req.params;
@@ -258,7 +278,7 @@ exports.authenticateToken = (req, res, next) => {
   }
 };
 
-// Middleware to check role
+// Middleware to check role (only allow PARTNER or CUSTOMER)
 exports.requireRole = (role) => {
   return (req, res, next) => {
     if (req.user.role !== ROLES[role]) {

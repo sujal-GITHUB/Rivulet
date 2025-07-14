@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "D:\\Work\\Projects\\Rivulet\\contracts\\ProductTracker.sol": {
-      "lastModificationDate": 1752309602317,
-      "contentHash": "953ffec55c28b525f16229a6827ff399",
+      "lastModificationDate": 1752371638517,
+      "contentHash": "d61ef9df5345ee5a9384f7eb69141a5f",
       "sourceName": "contracts/ProductTracker.sol",
       "solcConfig": {
         "version": "0.8.21",
